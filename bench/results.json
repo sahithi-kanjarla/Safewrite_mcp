@@ -1,0 +1,232 @@
+{
+  "env": {
+    "date": "2026-10-26",
+    "python": "3.13.8",
+    "sqlite": "3.50.4",
+    "sqlglot": "30.23.0",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "attacks": {
+    "total": 72,
+    "per_system": {
+      "naive": {
+        "damage": 56,
+        "unbounded": 4,
+        "harmless": 12
+      },
+      "regex": {
+        "blocked": 37,
+        "damage": 28,
+        "harmless": 4,
+        "unbounded": 3
+      },
+      "safewrite": {
+        "blocked": 32,
+        "gated": 37,
+        "contained": 3
+      }
+    },
+    "got_through": {
+      "naive": 60,
+      "regex": 31,
+      "safewrite": 0
+    },
+    "stopped": {
+      "naive": 0,
+      "regex": 37,
+      "safewrite": 72
+    },
+    "by_category": {
+      "ddl": {
+        "naive": {
+          "damage": 8
+        },
+        "regex": {
+          "blocked": 6,
+          "damage": 2
+        },
+        "safewrite": {
+          "blocked": 8
+        }
+      },
+      "unbounded": {
+        "naive": {
+          "damage": 10
+        },
+        "regex": {
+          "blocked": 8,
+          "damage": 2
+        },
+        "safewrite": {
+          "gated": 10
+        }
+      },
+      "tautology": {
+        "naive": {
+          "damage": 11
+        },
+        "regex": {
+          "damage": 11
+        },
+        "safewrite": {
+          "gated": 11
+        }
+      },
+      "stacked": {
+        "naive": {
+          "unbounded": 1,
+          "damage": 5
+        },
+        "regex": {
+          "blocked": 6
+        },
+        "safewrite": {
+          "blocked": 6
+        }
+      },
+      "obfuscation": {
+        "naive": {
+          "damage": 10
+        },
+        "regex": {
+          "blocked": 7,
+          "damage": 3
+        },
+        "safewrite": {
+          "blocked": 2,
+          "gated": 8
+        }
+      },
+      "system": {
+        "naive": {
+          "harmless": 11
+        },
+        "regex": {
+          "blocked": 8,
+          "harmless": 3
+        },
+        "safewrite": {
+          "blocked": 11
+        }
+      },
+      "protected": {
+        "naive": {
+          "damage": 4
+        },
+        "regex": {
+          "damage": 3,
+          "blocked": 1
+        },
+        "safewrite": {
+          "blocked": 4
+        }
+      },
+      "cascade": {
+        "naive": {
+          "damage": 4
+        },
+        "regex": {
+          "damage": 4
+        },
+        "safewrite": {
+          "gated": 4
+        }
+      },
+      "overwrite": {
+        "naive": {
+          "damage": 4
+        },
+        "regex": {
+          "damage": 3,
+          "blocked": 1
+        },
+        "safewrite": {
+          "gated": 4
+        }
+      },
+      "resource": {
+        "naive": {
+          "unbounded": 3,
+          "harmless": 1
+        },
+        "regex": {
+          "unbounded": 3,
+          "harmless": 1
+        },
+        "safewrite": {
+          "contained": 3,
+          "blocked": 1
+        }
+      }
+    },
+    "gated_total": 37,
+    "gated_invisible_to_static_analysis": 10,
+    "safewrite_misses": []
+  },
+  "benign": {
+    "reads_total": 10,
+    "reads_identical_to_direct_sql": 10,
+    "no_friction": 31,
+    "writes_total": 26,
+    "writes_identical_to_direct_sql": 26,
+    "writes_undone_exactly": 26,
+    "bulk_total": 5,
+    "needed_approval": 5,
+    "bulk_needed_approval": 5,
+    "regex_false_positives": 1,
+    "total": 36,
+    "problems": []
+  },
+  "roundtrips": {
+    "trials": 200,
+    "planned": 200,
+    "skipped": 0,
+    "needed_approval": 94,
+    "changed_the_database": 196,
+    "restored_byte_identical": 196
+  },
+  "latency": [
+    {
+      "orders": 1000,
+      "db_mb": 0.07,
+      "plan_targeted_p50_ms": 62.43,
+      "plan_targeted_p95_ms": 103.74,
+      "plan_10pct_p50_ms": 55.17,
+      "apply_with_snapshot_p50_ms": 168.07,
+      "raw_update_p50_ms": 42.6
+    },
+    {
+      "orders": 10000,
+      "db_mb": 0.43,
+      "plan_targeted_p50_ms": 64.83,
+      "plan_targeted_p95_ms": 262.73,
+      "plan_10pct_p50_ms": 65.95,
+      "apply_with_snapshot_p50_ms": 181.7,
+      "raw_update_p50_ms": 26.008
+    },
+    {
+      "orders": 100000,
+      "db_mb": 4.17,
+      "plan_targeted_p50_ms": 161.8,
+      "plan_targeted_p95_ms": 545.49,
+      "plan_10pct_p50_ms": 261.84,
+      "apply_with_snapshot_p50_ms": 1105.18,
+      "raw_update_p50_ms": 64.077
+    }
+  ],
+  "tamper": {
+    "log_entries": 600,
+    "modify": {
+      "trials": 50,
+      "detected": 50
+    },
+    "delete": {
+      "trials": 50,
+      "detected": 50
+    },
+    "reorder": {
+      "trials": 50,
+      "detected": 50
+    }
+  }
+}

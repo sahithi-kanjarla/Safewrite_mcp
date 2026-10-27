@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safewrite-mcp"
+version = "0.1.0"
+description = "A database MCP server where every agent write is previewed, approved by a human, and undoable. Includes a reproducible red-team benchmark."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["mcp>=2,<3", "sqlglot>=25"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "pytest-cov>=5"]
+
+[project.scripts]
+safewrite-mcp = "safewrite_mcp.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["safewrite_mcp*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
