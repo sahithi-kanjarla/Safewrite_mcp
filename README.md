@@ -1,8 +1,10 @@
 # safewrite-mcp
 
-**A database MCP server where an AI agent can propose writes but cannot make them without a human, and every change is previewed, audited, and undoable.**
+Most "run SQL" MCP servers hand the model an `execute(sql)` tool, so one prompt injection, one missing `WHERE`, or one cascading foreign key can destroy your data.
 
-Most "run SQL" MCP servers hand the model a `execute(sql)` tool. One prompt injection, one missing `WHERE`, or one cascading foreign key later, the data is gone. safewrite-mcp puts a guard between the agent and the database:
+**safewrite-mcp is a database MCP server where an AI agent can propose writes but cannot make them without a human, and every change is previewed, audited, and undoable.**
+
+## How it works
 
 ```
  agent                          safewrite-mcp                              human
@@ -17,6 +19,25 @@ Most "run SQL" MCP servers hand the model a `execute(sql)` tool. One prompt inje
 ```
 
 The agent has no tool, argument, or code path that approves its own plan.
+
+<!-- TODO: demo GIF here -->
+
+**Headline results** (from [`bench/RESULTS.md`](bench/RESULTS.md); author-written corpora, so not a security guarantee):
+
+- Red team, 72 attacks, no human approval granted: safewrite-mcp reached the data **0/72** (No guard: **60/72**, keyword filter: **31/72**)
+- Routine statements that ran with no friction: **31/31**
+- **196/196** restored a byte-identical database after undo
+
+## Tested with
+
+The "risky instructions" in these tests (delete customer 1, `DROP TABLE`) were given by me, the author, on purpose to exercise the guard. They are not mistakes the AI made by itself.
+
+| Client | What I observed |
+|---|---|
+| Claude Code (headless, throwaway demo database) | Asked to delete customer 1. Rated high risk (4 cascaded orders). The apply was declined because no human was present. The database was unchanged and the audit chain verified. |
+| VS Code Copilot Agent mode | Update of customer 7 applied with no safewrite approval (low risk). Delete of customer 1 was held, needed terminal approval, then applied. `DROP TABLE` was blocked by policy. Undo: TODO. VS Code version and date: TODO. |
+| Claude Desktop | Not tested. |
+| Cursor | Not tested. |
 
 ## Results
 
@@ -142,7 +163,7 @@ Policy lives in `<db dir>/.safewrite/policy.json` (all keys optional):
 ## Testing
 
 ```bash
-pytest --cov=safewrite_mcp      # 231 tests, 94% line coverage
+pytest --cov=safewrite_mcp      # 253 tests, 95% line coverage
 python -m bench.run             # regenerates bench/RESULTS.md and results.json
 python examples/walkthrough.py  # the session above, live
 ```

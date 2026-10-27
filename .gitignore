@@ -9,3 +9,5 @@ dist/
 .venv/
 .safewrite/
 *.db
+.vscode/
+CLAUDE.md

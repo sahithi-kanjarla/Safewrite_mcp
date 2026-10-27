@@ -16,7 +16,7 @@ Run `python -m bench.run` and `pytest --cov=safewrite_mcp` to regenerate them.
 | Preview latency | ~10–38 ms (median) | §4 | 1k–100k rows, Windows 11 laptop; machine-dependent |
 | Apply incl. snapshot | ~25–109 ms | §4 | Grows with DB size (snapshot copy) |
 | Audit tamper detection | 150 / 150 | §5 | Excludes tail truncation, which a hash chain can't detect |
-| Tests / coverage | 231 / 94% | `pytest --cov` | In-process coverage; the elicitation branch is exercised in subprocess tests it can't see |
+| Tests / coverage | 253 / 95% | `pytest --cov` | In-process coverage; the elicitation branch is exercised in subprocess tests it can't see |
 
 ## What changed after the first benchmark run (disclosure)
 
