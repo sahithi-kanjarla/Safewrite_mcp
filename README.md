@@ -60,6 +60,8 @@ Captured from [`examples/walkthrough.py`](examples/walkthrough.py) (`examples/wa
 ## Quick start
 
 ```bash
+git clone https://github.com/sahithi-kanjarla/Safewrite_mcp.git
+cd Safewrite_mcp
 pip install -e ".[dev]"                 # tested on Python 3.13
 safewrite-mcp demo-db demo.db           # a seeded demo database
 safewrite-mcp serve --db demo.db        # MCP server over stdio
@@ -84,7 +86,7 @@ safewrite-mcp approve <plan_id> --db demo.db      # shows the plan, asks y/N
 **Claude Code** (any project, any SQLite file):
 
 ```bash
-pip install safewrite-mcp          # or: pip install -e . from a clone
+pip install git+https://github.com/sahithi-kanjarla/Safewrite_mcp.git
 claude mcp add safewrite -- python -m safewrite_mcp serve --db /absolute/path/to/app.db
 ```
 

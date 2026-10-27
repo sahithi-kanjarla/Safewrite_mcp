@@ -10,6 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["mcp>=2,<3", "sqlglot>=25"]
 
+[project.urls]
+Homepage = "https://github.com/sahithi-kanjarla/Safewrite_mcp"
+Issues = "https://github.com/sahithi-kanjarla/Safewrite_mcp/issues"
+
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "pytest-cov>=5"]
 
