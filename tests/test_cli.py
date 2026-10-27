@@ -80,7 +80,91 @@ def test_verify_exit_codes(db, capsys):
     g.close()
 
 
-def test_home_is_required_when_nothing_identifies_it(monkeypatch):
+def test_home_is_required_when_nothing_identifies_it(monkeypatch, tmp_path):
     monkeypatch.delenv("SAFEWRITE_HOME", raising=False)
+    monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit, match="--home"):
         main(["pending"])
+
+
+def _approved(g, plan_id):
+    return (g.home / "approvals" / plan_id).exists()
+
+
+def test_approve_without_id_one_pending(db, capsys, monkeypatch):
+    g = GuardedDB(db, policy=Policy())
+    plan = g.plan(CASCADE, "x")
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    main(["approve", "--db", str(db)])
+    assert plan["summary"] in capsys.readouterr().out and _approved(g, plan["plan_id"])
+    g.close()
+
+
+def test_approve_without_id_one_pending_can_be_declined(db, monkeypatch):
+    g = GuardedDB(db, policy=Policy())
+    plan = g.plan(CASCADE, "x")
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    with pytest.raises(SystemExit, match="not approved"):
+        main(["approve", "--db", str(db)])
+    assert not _approved(g, plan["plan_id"])
+    g.close()
+
+
+def test_approve_without_id_several_pending_asks_which(db, capsys, monkeypatch):
+    g = GuardedDB(db, policy=Policy())
+    a = g.plan(CASCADE, "a")
+    b = g.plan("DELETE FROM customers WHERE id=2", "b")
+    answers = iter(["zzz"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    with pytest.raises(SystemExit, match="no plan chosen"):
+        main(["approve", "--db", str(db)])
+    listing = capsys.readouterr().out
+    assert a["plan_id"] in listing and b["plan_id"] in listing
+    assert not _approved(g, a["plan_id"]) and not _approved(g, b["plan_id"])
+
+    answers = iter([b["plan_id"], "y"])
+    main(["approve", "--db", str(db)])
+    assert _approved(g, b["plan_id"]) and not _approved(g, a["plan_id"])
+    g.close()
+
+
+def test_approve_without_id_none_pending(db):
+    GuardedDB(db, policy=Policy()).close()
+    with pytest.raises(SystemExit, match="no pending plans"):
+        main(["approve", "--db", str(db)])
+
+
+def test_approve_yes_requires_explicit_id(db):
+    g = GuardedDB(db, policy=Policy())
+    plan = g.plan(CASCADE, "x")
+    with pytest.raises(SystemExit, match="explicit plan id"):
+        main(["approve", "--db", str(db), "--yes"])
+    assert not _approved(g, plan["plan_id"])
+    g.close()
+
+
+def test_home_auto_detected_from_current_folder_and_parents(db, capsys, monkeypatch):
+    monkeypatch.delenv("SAFEWRITE_HOME", raising=False)
+    g = GuardedDB(db, policy=Policy())
+    plan = g.plan(CASCADE, "x")
+    sub = db.parent / "a" / "b"
+    sub.mkdir(parents=True)
+    for cwd in (db.parent, sub):
+        monkeypatch.chdir(cwd)
+        main(["pending"])
+        assert plan["plan_id"] in capsys.readouterr().out
+    g.close()
+
+
+def test_env_home_beats_autodetect_and_explicit_beats_env(db, tmp_path, capsys, monkeypatch):
+    g = GuardedDB(db, policy=Policy())
+    plan = g.plan(CASCADE, "x")
+    empty = tmp_path / "elsewhere"
+    (empty / "pending").mkdir(parents=True)
+    monkeypatch.chdir(db.parent)
+    monkeypatch.setenv("SAFEWRITE_HOME", str(empty))
+    main(["pending"])
+    assert "no pending plans" in capsys.readouterr().out
+    main(["pending", "--home", str(g.home)])
+    assert plan["plan_id"] in capsys.readouterr().out
+    g.close()

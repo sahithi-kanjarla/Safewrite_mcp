@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,18 @@ def _err(e: SafeWriteError) -> dict[str, Any]:
 
 class Approval(BaseModel):
     approve: bool = Field(description="Apply this change to the database?")
+
+
+def _ps(arg: str) -> str:
+    """Quote for PowerShell only when needed."""
+    if arg and all(c.isalnum() or c in "\\/:._-" for c in arg):
+        return arg
+    return "'" + arg.replace("'", "''") + "'"
+
+
+def _approve_command(plan_id: str, home: Path) -> str:
+    """A command that runs in a fresh PowerShell: absolute interpreter, no venv activation."""
+    return f"& {_ps(sys.executable)} -m safewrite_mcp approve {plan_id} --home {_ps(str(home))}"
 
 
 def _approval_message(view: dict[str, Any]) -> str:
@@ -141,7 +154,7 @@ async def apply_change(plan_id: str, ctx: Context) -> dict[str, Any]:
         "status": "approval_required",
         "message": "This change needs the user's approval. Show them the plan, then ask them to run the command "
                    "below in their terminal and tell you when it's done. Then call apply_change again.",
-        "command": f"safewrite-mcp approve {plan_id} --home {e.home}",
+        "command": _approve_command(plan_id, e.home),
     }
 
 

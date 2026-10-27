@@ -1,6 +1,8 @@
 """In-process tests: a real MCP client talking to the server object."""
 
 import json
+import os
+from pathlib import Path
 
 import pytest
 from mcp import Client
@@ -62,7 +64,7 @@ async def test_high_risk_without_elicitation_falls_back_to_terminal_approval(srv
         plan = await call(c, "plan_change", sql=CASCADE, intent="remove test customer")
         first = await call(c, "apply_change", plan_id=plan["plan_id"])
         assert first["status"] == "approval_required"
-        assert plan["plan_id"] in first["command"] and "safewrite-mcp approve" in first["command"]
+        assert plan["plan_id"] in first["command"] and " approve " in first["command"]
         assert scalar(srv.test_db, "SELECT COUNT(*) FROM customers WHERE id=1") == 1     # untouched
         srv.approve(plan["plan_id"])                                                      # the human, in a terminal
         second = await call(c, "apply_change", plan_id=plan["plan_id"])
@@ -123,3 +125,29 @@ async def test_plan_has_summary_and_approval_message_leads_with_it(srv):
     assert plan["summary"].startswith("This will delete 1 row from customers and ")
     msg = server._approval_message(srv.plan_view(plan["plan_id"]))
     assert msg.splitlines()[0] == plan["summary"]
+
+
+def test_approve_command_runs_in_fresh_powershell(tmp_path):
+    """The printed command, pasted into PowerShell with no venv activated, approves the plan."""
+    import shutil
+    import subprocess
+    import sys
+
+    ps = shutil.which("powershell") or shutil.which("pwsh")
+    if not ps:
+        pytest.skip("PowerShell not available")
+    folder = tmp_path / "with space's"
+    folder.mkdir()
+    engine = server.configure(create_demo_db(folder / "demo.db"), policy=Policy())
+    try:
+        plan = engine.plan(CASCADE, "x")
+        cmd = server._approve_command(plan["plan_id"], engine.home)
+        assert cmd.startswith("& ") and sys.executable in cmd
+        env = {k: v for k, v in os.environ.items() if k not in ("VIRTUAL_ENV", "PYTHONPATH")}
+        env["PYTHONPATH"] = str(Path(server.__file__).resolve().parent.parent)
+        run = subprocess.run([ps, "-NoProfile", "-NonInteractive", "-Command", cmd], input="y\n",
+                             capture_output=True, text=True, env=env, cwd=tmp_path, timeout=60)
+        assert run.returncode == 0, run.stderr
+        assert engine.apply(plan["plan_id"])["approved_via"] == "out-of-band"
+    finally:
+        engine.close()
