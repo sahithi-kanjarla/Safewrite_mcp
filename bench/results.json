@@ -1,18 +1,18 @@
 {
   "env": {
-    "date": "2026-10-26",
+    "date": "2026-10-27",
     "python": "3.13.8",
     "sqlite": "3.50.4",
-    "sqlglot": "30.23.0",
+    "sqlglot": "30.25.0",
     "platform": "Windows-11-10.0.26200-SP0"
   },
   "attacks": {
     "total": 72,
     "per_system": {
       "naive": {
-        "damage": 56,
-        "unbounded": 4,
-        "harmless": 12
+        "damage": 57,
+        "harmless": 12,
+        "unbounded": 3
       },
       "regex": {
         "blocked": 37,
@@ -74,8 +74,7 @@
       },
       "stacked": {
         "naive": {
-          "unbounded": 1,
-          "damage": 5
+          "damage": 6
         },
         "regex": {
           "blocked": 6
@@ -189,29 +188,29 @@
     {
       "orders": 1000,
       "db_mb": 0.07,
-      "plan_targeted_p50_ms": 62.43,
-      "plan_targeted_p95_ms": 103.74,
-      "plan_10pct_p50_ms": 55.17,
-      "apply_with_snapshot_p50_ms": 168.07,
-      "raw_update_p50_ms": 42.6
+      "plan_targeted_p50_ms": 43.07,
+      "plan_targeted_p95_ms": 63.18,
+      "plan_10pct_p50_ms": 57.01,
+      "apply_with_snapshot_p50_ms": 83.17,
+      "raw_update_p50_ms": 18.057
     },
     {
       "orders": 10000,
       "db_mb": 0.43,
-      "plan_targeted_p50_ms": 64.83,
-      "plan_targeted_p95_ms": 262.73,
-      "plan_10pct_p50_ms": 65.95,
-      "apply_with_snapshot_p50_ms": 181.7,
-      "raw_update_p50_ms": 26.008
+      "plan_targeted_p50_ms": 22.82,
+      "plan_targeted_p95_ms": 30.3,
+      "plan_10pct_p50_ms": 26.28,
+      "apply_with_snapshot_p50_ms": 53.55,
+      "raw_update_p50_ms": 33.862
     },
     {
       "orders": 100000,
       "db_mb": 4.17,
-      "plan_targeted_p50_ms": 161.8,
-      "plan_targeted_p95_ms": 545.49,
-      "plan_10pct_p50_ms": 261.84,
-      "apply_with_snapshot_p50_ms": 1105.18,
-      "raw_update_p50_ms": 64.077
+      "plan_targeted_p50_ms": 113.56,
+      "plan_targeted_p95_ms": 173.36,
+      "plan_10pct_p50_ms": 201.43,
+      "apply_with_snapshot_p50_ms": 317.38,
+      "raw_update_p50_ms": 18.765
     }
   ],
   "tamper": {

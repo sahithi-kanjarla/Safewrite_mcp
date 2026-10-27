@@ -12,11 +12,13 @@ Policy:   `settings` is protected; DROP/ALTER disabled; >10 rows or any cascade 
    -> status=planned risk=high rows=1 cascades={'orders': -4}
       - collateral effects via cascade/trigger: {'orders': -4}
    note: 1 row, but the dry run found it cascades into the orders table
-   tool: apply_change -> approval_required (plan 17f9d15e560c22e7 is high risk and needs human approval)
+   tool: apply_change -> approval_required (plan 9e0d3c62e87a073b is high risk and needs human approval)
    customers still: 200
 
-[human] $ safewrite-mcp approve 17f9d15e560c22e7 --db shop.db --yes
-   plan      17f9d15e560c22e7   risk: HIGH
+[human] $ safewrite-mcp approve 9e0d3c62e87a073b --db shop.db --yes
+   This will delete 1 row from customers and 4 rows from orders (cascade/trigger). customers would go from 200 to 199 rows. High risk. It can be undone.
+   
+     plan      9e0d3c62e87a073b   risk: HIGH
      SQL       DELETE FROM customers WHERE id = 1
      intent    remove test customer from QA run
      rows      1 of 200 in 'customers'

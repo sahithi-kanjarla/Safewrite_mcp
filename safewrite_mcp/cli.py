@@ -24,6 +24,8 @@ def _home(args: argparse.Namespace) -> Path:
 
 def _print_plan(plan: dict) -> None:
     imp = plan["impact"]
+    if plan.get("summary"):
+        print(f"\n  {plan['summary']}")
     print(f"\n  plan      {plan['plan_id']}   risk: {plan['risk'].upper()}")
     print(f"  SQL       {plan['statement']}")
     print(f"  intent    {plan.get('intent') or '(none)'}")

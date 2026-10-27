@@ -24,9 +24,18 @@ def test_pending_show_and_approve_flow(db, capsys):
     main(["show", plan["plan_id"], "--db", str(db)])
     shown = capsys.readouterr().out
     assert "DELETE FROM customers WHERE id = 1" in shown and "orders" in shown
+    assert shown.lstrip().startswith(plan["summary"])
 
     main(["approve", plan["plan_id"], "--db", str(db), "--yes"])
     assert g.apply(plan["plan_id"])["approved_via"] == "out-of-band"
+    g.close()
+
+
+def test_approve_prints_summary_first(db, capsys):
+    g = GuardedDB(db, policy=Policy())
+    plan = g.plan(CASCADE, "x")
+    main(["approve", plan["plan_id"], "--db", str(db), "--yes"])
+    assert capsys.readouterr().out.lstrip().startswith(plan["summary"])
     g.close()
 
 

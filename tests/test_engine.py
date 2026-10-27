@@ -323,3 +323,73 @@ def test_every_step_is_audited_and_the_chain_verifies(g):
 def test_missing_database_is_an_error(tmp_path):
     with pytest.raises(FileNotFoundError):
         GuardedDB(tmp_path / "nope.db")
+
+
+# ------------------------------------------------------------------- summary
+def test_summary_delete_with_cascade_matches_measured_numbers(g, db):
+    orders_of_1 = scalar(db, "SELECT COUNT(*) FROM orders WHERE customer_id=1")
+    customers = scalar(db, "SELECT COUNT(*) FROM customers")
+    plan = g.plan(CASCADE, "x")
+    assert plan["summary"] == (
+        f"This will delete 1 row from customers and {orders_of_1} rows from orders (cascade/trigger). "
+        f"customers would go from {customers} to {customers - 1} rows. High risk. It can be undone.")
+    imp = plan["impact"]
+    assert str(-imp["collateral_changes"]["orders"]) in plan["summary"]
+    assert str(imp["table_rows_before"]) in plan["summary"]
+
+
+def test_summary_update_names_the_column_change(g):
+    s = g.plan(LOW, "x")["summary"]
+    assert s.startswith("This will update 1 row in customers (status: 'active' -> 'vip').") and "Low risk." in s
+
+
+def test_summary_bulk_update_uses_measured_row_count(g):
+    plan = g.plan("UPDATE orders SET status='x' WHERE id BETWEEN 1 AND 40", "x")
+    assert plan["summary"].startswith("This will update 40 rows in orders (changing status).")
+    assert "Medium risk." in plan["summary"]
+
+
+def test_summary_update_matching_nothing(g):
+    assert "update 0 rows in customers; nothing would change" in g.plan(
+        "UPDATE customers SET status='x' WHERE id=-5", "x")["summary"]
+
+
+def test_summary_insert(g, db):
+    n = scalar(db, "SELECT COUNT(*) FROM products")
+    s = g.plan("INSERT INTO products (name, price, stock) VALUES ('Widget', 2.5, 3)", "x")["summary"]
+    assert s.startswith(f"This will insert 1 row into products. products would go from {n} to {n + 1} rows.")
+
+
+def test_summary_overwrite(g, db):
+    n = scalar(db, "SELECT COUNT(*) FROM products")
+    s = g.plan("INSERT OR REPLACE INTO products (id, name, price, stock) VALUES (1, 'x', 0, 0)", "x")["summary"]
+    assert s.startswith(f"This will overwrite 1 existing row in products. products would stay at {n} rows.")
+    assert "Medium risk." in s
+
+
+@pytest.mark.parametrize("sql,why", [
+    ("DROP TABLE customers", "DROP is disabled by policy"),
+    ("UPDATE settings SET value='x'", "'settings' is a protected table"),
+    ("DELETE FROM customers; DELETE FROM orders", "stacked statements"),
+])
+def test_summary_blocked_says_why(g, sql, why):
+    s = g.plan(sql, "x")["summary"]
+    assert s.startswith("Blocked: ") and why in s and s.endswith("Nothing was run.")
+
+
+def test_summary_blocked_by_hard_limit(db):
+    g = GuardedDB(db, policy=Policy(hard_max_rows=5))
+    s = g.plan("UPDATE orders SET status='x' WHERE id <= 50", "x")["summary"]
+    assert "Blocked: would change 50 rows; the hard limit is 5" in s
+    g.close()
+
+
+def test_summary_does_not_promise_undo_when_snapshots_are_off(db):
+    g = GuardedDB(db, policy=Policy(snapshot_max_mb=0))
+    assert "It cannot be undone automatically." in g.plan(LOW, "x")["summary"]
+    g.close()
+
+
+def test_summary_is_persisted_for_the_terminal(g):
+    plan = g.plan(CASCADE, "x")
+    assert g.pending()[0]["summary"] == plan["summary"]

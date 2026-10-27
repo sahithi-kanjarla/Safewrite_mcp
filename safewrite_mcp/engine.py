@@ -95,6 +95,65 @@ def db_fingerprint(path: Path | str) -> str:
         conn.close()
 
 
+def _n(n: int, word: str = "row") -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
+def _short(v: Any, limit: int = 40) -> str:
+    text = repr(v) if isinstance(v, str) else str(v)
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+def summarize(kind: str, risk: str, reasons: list[str], impact: dict[str, Any] | None, undoable: bool) -> str:
+    """One or two plain sentences describing a plan, built only from the measured dry-run data."""
+    if risk == "blocked":
+        return f"Blocked: {'; '.join(reasons)}. Nothing was run."
+    imp = impact or {}
+    t, n = imp.get("target_table"), imp.get("rows_affected")
+    before = imp.get("table_rows_before")
+    net = imp.get("net_row_changes") or {}
+    other = imp.get("collateral_changes") or {}
+    if n is None or not t:
+        head = f"This will run a {kind.upper()} statement."
+    else:
+        after = before + net.get(t, 0) if before is not None else None
+        resize = ""
+        if after is not None and after != before:
+            resize = f" {t} would go from {before} to {after} rows."
+        elif after is not None and kind in ("insert", "update", "delete"):
+            resize = f" {t} would stay at {after} rows."
+        if kind == "delete":
+            parts = [f"{_n(n)} from {t}"] + [f"{_n(-d)} from {x}" for x, d in other.items() if d < 0]
+            head = f"This will delete {' and '.join(parts)}" + (" (cascade/trigger)." if other else ".") + resize
+        elif kind == "insert":
+            over = imp.get("overwritten_rows") or 0
+            new = n - over
+            parts = ([f"insert {_n(new)}"] if new or not over else []) + ([f"overwrite {over} existing row{'' if over == 1 else 's'}"] if over else [])
+            head = f"This will {' and '.join(parts)} {'into' if not over else 'in'} {t}." + resize
+            if other:
+                head += " It also changes " + ", ".join(f"{x} ({d:+d} rows)" for x, d in other.items()) + "."
+        elif kind == "update":
+            changes: dict[str, list[Any]] = {}
+            for r in (imp.get("diff") or {}).get("rows_changed", []):
+                for col, ov in r["changes"].items():
+                    changes.setdefault(col, ov)
+            if not n:
+                head = f"This will update 0 rows in {t}; nothing would change."
+            else:
+                what = ""
+                if changes and n == 1:
+                    what = " (" + ", ".join(f"{c}: {_short(o)} -> {_short(v)}" for c, (o, v) in changes.items()) + ")"
+                elif changes:
+                    what = f" (changing {', '.join(changes)})"
+                head = f"This will update {_n(n)} in {t}{what}."
+            if other:
+                head += " It also changes " + ", ".join(f"{x} ({d:+d} rows)" for x, d in other.items()) + "."
+        else:
+            head = f"This will change {_n(n)} in {t}."
+    tail = f" {risk.capitalize()} risk." + (" It can be undone." if undoable else " It cannot be undone automatically.")
+    return head + tail
+
+
 @dataclass
 class Plan:
     plan_id: str
@@ -353,7 +412,8 @@ class GuardedDB:
             base = {"statement": c.canonical_sql, "kind": c.kind}
             if c.blocked:
                 self.audit.append("blocked", sql=sql[:500], kind=c.kind, reasons=c.reasons, intent=intent)
-                return {"status": "blocked", "risk": "blocked", "reasons": c.reasons, **base}
+                return {"status": "blocked", "risk": "blocked", "reasons": c.reasons,
+                        "summary": summarize(c.kind, "blocked", c.reasons, None, False), **base}
             if c.kind == "select":
                 return {"status": "not_a_write", "message": "This is a read-only statement. Use query()."}
             try:
@@ -365,7 +425,8 @@ class GuardedDB:
             risk, reasons = self._assess(c, impact)
             if risk == "blocked":
                 self.audit.append("blocked", sql=c.canonical_sql, kind=c.kind, reasons=reasons, intent=intent)
-                return {"status": "blocked", "risk": "blocked", "reasons": reasons, "impact": impact, **base}
+                return {"status": "blocked", "risk": "blocked", "reasons": reasons, "impact": impact,
+                        "summary": summarize(c.kind, "blocked", reasons, impact, False), **base}
             plan = Plan(
                 plan_id=secrets.token_hex(8), sql=c.canonical_sql or "", kind=c.kind, risk=risk, reasons=reasons,
                 impact=impact, intent=intent, expires=self.clock() + self.policy.plan_ttl_s,
@@ -381,10 +442,15 @@ class GuardedDB:
 
     def _view(self, p: Plan) -> dict[str, Any]:
         return {
-            "status": "planned", "plan_id": p.plan_id, "statement": p.sql, "kind": p.kind, "risk": p.risk,
+            "status": "planned", "plan_id": p.plan_id, "summary": summarize(p.kind, p.risk, p.reasons, p.impact, self._undoable()),
+            "statement": p.sql, "kind": p.kind, "risk": p.risk,
             "requires_approval": p.requires_approval, "reasons": p.reasons, "impact": p.impact,
             "intent": p.intent, "expires_in_s": max(0, int(p.expires - self.clock())),
         }
+
+    def _undoable(self) -> bool:
+        """Same size test _snapshot applies, so the summary only promises undo when apply can deliver it."""
+        return self.db_path.stat().st_size / 1e6 <= self.policy.snapshot_max_mb
 
     def _gc(self) -> None:
         """Drop plans that can no longer be applied, so nobody is asked to approve a dead plan."""

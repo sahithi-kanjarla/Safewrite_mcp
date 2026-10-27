@@ -64,6 +64,8 @@ class Approval(BaseModel):
 def _approval_message(view: dict[str, Any]) -> str:
     imp = view["impact"]
     lines = [
+        view["summary"],
+        "",
         f"Approve this {view['risk'].upper()}-risk change?",
         f"SQL: {view['statement']}",
         f"Why: {view['intent'] or '(none given)'}",

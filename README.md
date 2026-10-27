@@ -44,8 +44,10 @@ Captured from [`examples/walkthrough.py`](examples/walkthrough.py) (`examples/wa
    -> status=planned risk=high rows=1 cascades={'orders': -4}
    tool: apply_change -> approval_required        # customers still: 200
 
-[human] $ safewrite-mcp approve 17f9d15e560c22e7 --db shop.db --yes
-   plan  17f9d15e560c22e7   risk: HIGH
+[human] $ safewrite-mcp approve 9e0d3c62e87a073b --db shop.db --yes
+   This will delete 1 row from customers and 4 rows from orders (cascade/trigger). customers would go from 200 to 199 rows. High risk. It can be undone.
+
+   plan  9e0d3c62e87a073b   risk: HIGH
    SQL   DELETE FROM customers WHERE id = 1
    rows  1 of 200 in 'customers'      cascades  {'orders': -4}
 
@@ -109,7 +111,7 @@ Policy lives in `<db dir>/.safewrite/policy.json` (all keys optional):
 | Kind | Name | Purpose |
 |---|---|---|
 | tool | `query` | One read-only `SELECT`: read-only connection, 200-row cap, 2 s timeout |
-| tool | `plan_change(sql, intent)` | Dry-run a write; returns impact, diff, risk, `plan_id`. Intent is required and logged |
+| tool | `plan_change(sql, intent)` | Dry-run a write; returns a plain-English `summary`, impact, diff, risk, `plan_id`. Intent is required and logged |
 | tool | `apply_change(plan_id)` | Apply a plan. Takes **only** a plan id, nothing that could approve |
 | tool | `undo_last_change` | Restore the pre-change snapshot, if nothing else has changed since |
 | tool | `list_tables`, `pending_changes`, `audit_tail`, `verify_audit` | Inspection |

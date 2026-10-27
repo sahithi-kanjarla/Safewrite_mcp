@@ -115,3 +115,11 @@ async def test_resources_and_prompt(srv):
         prompt = await c.get_prompt("safe_cleanup", {"goal": "archive inactive customers"})
         text = prompt.messages[0].content.text
         assert "archive inactive customers" in text and "never try to work around" in text
+
+
+async def test_plan_has_summary_and_approval_message_leads_with_it(srv):
+    async with Client(server.mcp) as c:
+        plan = await call(c, "plan_change", sql=CASCADE, intent="x")
+    assert plan["summary"].startswith("This will delete 1 row from customers and ")
+    msg = server._approval_message(srv.plan_view(plan["plan_id"]))
+    assert msg.splitlines()[0] == plan["summary"]

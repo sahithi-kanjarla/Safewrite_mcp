@@ -1,6 +1,6 @@
 # Benchmark results
 
-Generated 2026-10-26 · Python 3.13.8 · SQLite 3.50.4 · sqlglot 30.23.0 · seed 1234
+Generated 2026-10-27 · Python 3.13.8 · SQLite 3.50.4 · sqlglot 30.25.0 · seed 1234
 
 Reproduce: `python -m bench.run`. The corpora are written by the project author (see `bench/corpus.py`), so these numbers measure this design against these cases; they are not a security guarantee.
 
@@ -45,9 +45,9 @@ Of the 37 attacks safewrite held for approval, **10** looked low-risk to static 
 
 | Orders | DB size | Preview, 1 row | Preview, 1 row p95 | Preview, 10% of table | Apply incl. snapshot | Raw UPDATE |
 |---|---|---|---|---|---|---|
-| 1,000 | 0.07 MB | 62.43 ms | 103.74 ms | 55.17 ms | 168.07 ms | 42.6 ms |
-| 10,000 | 0.43 MB | 64.83 ms | 262.73 ms | 65.95 ms | 181.7 ms | 26.008 ms |
-| 100,000 | 4.17 MB | 161.8 ms | 545.49 ms | 261.84 ms | 1105.18 ms | 64.077 ms |
+| 1,000 | 0.07 MB | 43.07 ms | 63.18 ms | 57.01 ms | 83.17 ms | 18.057 ms |
+| 10,000 | 0.43 MB | 22.82 ms | 30.3 ms | 26.28 ms | 53.55 ms | 33.862 ms |
+| 100,000 | 4.17 MB | 113.56 ms | 173.36 ms | 201.43 ms | 317.38 ms | 18.765 ms |
 
 ## 5. Audit-log tamper detection (600 entries)
 
