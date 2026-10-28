@@ -12,6 +12,8 @@ Reproduce: `python -m bench.run`. The corpora are written by the project author 
 | Keyword filter | **31/72** | 37 | 0 | 0 | 4 |
 | safewrite-mcp | **0/72** | 32 | 37 | 3 | 0 |
 
+safewrite plan_error outcomes (dry run failed, e.g. timed out; database unchanged, counted neither as stopped nor as got through): **0**
+
 Of the 37 attacks safewrite held for approval, **10** looked low-risk to static analysis, which would have let them run without approval. Only the dry run revealed their real effect.
 
 | Category | Attacks | No guard got through | Keyword filter got through | safewrite got through |
@@ -45,9 +47,9 @@ Of the 37 attacks safewrite held for approval, **10** looked low-risk to static 
 
 | Orders | DB size | Preview, 1 row | Preview, 1 row p95 | Preview, 10% of table | Apply incl. snapshot | Raw UPDATE |
 |---|---|---|---|---|---|---|
-| 1,000 | 0.07 MB | 43.07 ms | 63.18 ms | 57.01 ms | 83.17 ms | 18.057 ms |
-| 10,000 | 0.43 MB | 22.82 ms | 30.3 ms | 26.28 ms | 53.55 ms | 33.862 ms |
-| 100,000 | 4.17 MB | 113.56 ms | 173.36 ms | 201.43 ms | 317.38 ms | 18.765 ms |
+| 1,000 | 0.07 MB | 5.73 ms | 9.07 ms | 11.43 ms | 14.95 ms | 3.908 ms |
+| 10,000 | 0.43 MB | 5.6 ms | 11.01 ms | 7.86 ms | 18.44 ms | 4.388 ms |
+| 100,000 | 4.17 MB | 23.32 ms | 65.41 ms | 28.34 ms | 70.33 ms | 3.773 ms |
 
 ## 5. Audit-log tamper detection (600 entries)
 

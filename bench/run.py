@@ -112,11 +112,17 @@ def attack_regex(arena: Arena, sql: str) -> str:
     return attack_naive(arena, sql)
 
 
-def attack_safewrite(arena: Arena, sql: str) -> tuple[str, str]:
-    """Returns (outcome, static_risk). No human approval is ever granted."""
+def attack_safewrite(arena: Arena, sql: str) -> tuple[str, str, dict]:
+    """Returns (outcome, static_risk, detail). No human approval is ever granted.
+
+    "plan_error" means the dry run itself failed (timeout, locked database, other sqlite3 error), so the
+    statement was neither blocked nor held; it only counts as stopped if the database is unchanged.
+    detail carries the database path and the plan's error text (None if there was none).
+    """
     p = arena.fresh()
     g = GuardedDB(p, policy=policy())
     label = "harmless"
+    detail: dict = {"db": p, "plan_error": None}
     static = classify(sql, g.policy)
     try:
         if static.kind == "select" and not static.blocked:
@@ -130,6 +136,9 @@ def attack_safewrite(arena: Arena, sql: str) -> tuple[str, str]:
             plan = g.plan(sql, "benchmark")
             if plan["status"] == "blocked":
                 label = "blocked"
+            elif plan["status"] == "error":
+                label = "plan_error"
+                detail["plan_error"] = plan.get("error")
             elif plan["status"] == "planned":
                 try:
                     g.apply(plan["plan_id"])
@@ -142,7 +151,7 @@ def attack_safewrite(arena: Arena, sql: str) -> tuple[str, str]:
         label = "damage"
     elif label == "applied":
         label = "harmless"
-    return label, static.risk
+    return label, static.risk, detail
 
 
 # --------------------------------------------------------------------- attacks
@@ -151,13 +160,16 @@ def run_attacks(arena: Arena) -> dict:
     by_cat: dict[str, dict[str, Counter]] = defaultdict(lambda: {s: Counter() for s in per_system})
     gated_static: Counter = Counter()
     misses: list[str] = []
+    plan_errors: list[dict] = []
     for cat, raw in ATTACKS:
         sql = raw.replace("__TMP__", str(arena.tmp))
         results = {
             "naive": attack_naive(arena, sql),
             "regex": attack_regex(arena, sql),
         }
-        results["safewrite"], static_risk = attack_safewrite(arena, sql)
+        results["safewrite"], static_risk, detail = attack_safewrite(arena, sql)
+        if results["safewrite"] == "plan_error":
+            plan_errors.append({"sql": raw, "error": detail["plan_error"]})
         for system, label in results.items():
             per_system[system][label] += 1
             by_cat[cat][system][label] += 1
@@ -175,6 +187,7 @@ def run_attacks(arena: Arena) -> dict:
         "gated_total": sum(gated_static.values()),
         "gated_invisible_to_static_analysis": gated_static.get("low", 0),
         "safewrite_misses": misses,
+        "safewrite_plan_errors": plan_errors,
     }
 
 
@@ -390,6 +403,9 @@ def markdown(r: dict) -> str:
     for name, label in (("naive", "No guard (executes anything)"), ("regex", "Keyword filter"), ("safewrite", "safewrite-mcp")):
         c = s[name]
         L.append(f"| {label} | **{a['got_through'][name]}/{n}** | {c.get('blocked', 0)} | {c.get('gated', 0)} | {c.get('contained', 0)} | {c.get('harmless', 0)} |")
+    pe = a["safewrite_plan_errors"]
+    L += ["", f"safewrite plan_error outcomes (dry run failed, e.g. timed out; database unchanged, counted neither as stopped nor as got through): **{len(pe)}**"]
+    L += [f"- `{e['sql']}`: {e['error']}" for e in pe]
     L += [
         "",
         f"Of the {a['gated_total']} attacks safewrite held for approval, **{a['gated_invisible_to_static_analysis']}** looked "

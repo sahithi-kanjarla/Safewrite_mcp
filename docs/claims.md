@@ -13,10 +13,10 @@ Run `python -m bench.run` and `pytest --cov=safewrite_mcp` to regenerate them.
 | Legitimate bulk ops held for approval | 5 / 5 | §2 | This is the friction cost; added after the first run to show it |
 | Reads/writes identical to direct SQL | 10/10 and 26/26 | §2 | Proves the regenerated SQL is semantics-preserving on this corpus |
 | Write → undo restores byte-identical DB | 196 / 196 | §3 | 200 seeded random statements; 4 were no-ops and are excluded |
-| Preview latency | ~10–38 ms (median) | §4 | 1k–100k rows, Windows 11 laptop; machine-dependent |
-| Apply incl. snapshot | ~25–109 ms | §4 | Grows with DB size (snapshot copy) |
+| Preview latency | 5.6–23.3 ms (median) | §4 | 1k–100k rows, Windows 11 laptop; machine-dependent |
+| Apply incl. snapshot | 15.0–70.3 ms | §4 | Grows with DB size (snapshot copy) |
 | Audit tamper detection | 150 / 150 | §5 | Excludes tail truncation, which a hash chain can't detect |
-| Tests / coverage | 253 / 95% | `pytest --cov` | In-process coverage; the elicitation branch is exercised in subprocess tests it can't see |
+| Tests / coverage | 254 / 95% | `pytest --cov` | In-process coverage; the elicitation branch is exercised in subprocess tests it can't see |
 
 ## What changed after the first benchmark run (disclosure)
 
@@ -24,6 +24,10 @@ Run `python -m bench.run` and `pytest --cov=safewrite_mcp` to regenerate them.
 2. Added 5 legitimate bulk operations to the workload so the friction cost is visible (the first workload had none).
 3. Found by the test suite: plans made before a change stayed listed as pending after they could no longer be applied. Fixed.
 4. Policy thresholds were not changed after seeing results.
+
+## Change after a flaky corpus test (disclosure)
+
+`test_attack_is_stopped_and_data_is_untouched[obfuscation-41]` failed once with label "harmless". The benchmark harness started every case as "harmless" and ignored a `plan()` status of `"error"`, so a dry run that failed (for example one that hit the 2 s `query_timeout_ms` on a slow, loaded machine) was counted as harmless. It now gets its own label, `plan_error`, with the error text kept, and `bench/RESULTS.md` reports the count under the red-team table. The corpus test accepts `plan_error` only when the database fingerprint is unchanged. A new test forces a plan error with a 1 ms timeout (test only) to check the label. No timeout or policy value was changed; the headline attack numbers are identical before and after, with 0 `plan_error` outcomes in the re-run. I could not reproduce the original failure (0 failures in 50 idle and 50 loaded runs; the slowest loaded `plan` took 1874 ms), so the timeout explanation is my best inference, not a confirmed cause.
 
 ## Things I'd say if asked what I learned
 

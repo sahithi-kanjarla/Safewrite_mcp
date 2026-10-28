@@ -35,7 +35,7 @@ The "risky instructions" in these tests (delete customer 1, `DROP TABLE`) were g
 | Client | What I observed |
 |---|---|
 | Claude Code (headless, throwaway demo database) | Asked to delete customer 1. Rated high risk (4 cascaded orders). The apply was declined because no human was present. The database was unchanged and the audit chain verified. |
-| VS Code Copilot Agent mode | Update of customer 7 applied with no safewrite approval (low risk). Delete of customer 1 was held, needed terminal approval, then applied. `DROP TABLE` was blocked by policy. Undo: TODO. VS Code version and date: TODO. |
+| VS Code Copilot Agent mode | Update of customer 7 applied with no safewrite approval (low risk). Delete of customer 1 was held, needed terminal approval, then applied. `DROP TABLE` was blocked by policy. Undo: after a delete of customer 2 was approved and applied (it also removed 7 related orders), "undo the last change" ran and Copilot reported customer 2 was present again. Tested with VS Code 1.143.1 on 2026-10-27. |
 | Claude Desktop | Not tested. |
 | Cursor | Not tested. |
 
@@ -52,7 +52,7 @@ Measured by `python -m bench.run` (seeded, reproducible, full report in [`bench/
 - **10 of the 37 held attacks looked harmless to static analysis** (`WHERE id>=0`, `WHERE id IN (SELECT id …)`, a 1-row delete that cascades into other tables). Only the dry run, which measures what a statement actually does, caught them.
 - **31/31 routine statements ran with no friction**; 5/5 legitimate bulk operations were held for a single approval (by design). Read results and the resulting database content were identical to running the SQL directly (10/10 reads, 26/26 writes).
 - **196/196** randomized write → undo round-trips restored a byte-identical database.
-- Median **~10–38 ms** to preview a single-row change (46 ms for a 10% update at 100k rows); **~25–109 ms** to apply including the undo snapshot, for 1k–100k orders. Measured on a Windows 11 laptop (Python 3.13) and varies by machine and run; `python -m bench.run` reproduces it.
+- Median **5.6–23.3 ms** to preview a single-row change (28.3 ms for a 10% update at 100k rows); **15.0–70.3 ms** to apply including the undo snapshot, for 1k–100k orders. Measured on a Windows 11 laptop (`Windows-11-10.0.26200-SP0`, Python 3.13.8) in one run (2026-10-27); it varies by machine and run, and `python -m bench.run` reproduces it.
 - Audit log: **150/150** edits, deletions, and reorderings detected.
 
 ## A real session
@@ -163,7 +163,7 @@ Policy lives in `<db dir>/.safewrite/policy.json` (all keys optional):
 ## Testing
 
 ```bash
-pytest --cov=safewrite_mcp      # 253 tests, 95% line coverage
+pytest --cov=safewrite_mcp      # 254 tests, 95% line coverage
 python -m bench.run             # regenerates bench/RESULTS.md and results.json
 python examples/walkthrough.py  # the session above, live
 ```
