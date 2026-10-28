@@ -107,7 +107,7 @@ def _short(v: Any, limit: int = 40) -> str:
 def summarize(kind: str, risk: str, reasons: list[str], impact: dict[str, Any] | None, undoable: bool) -> str:
     """One or two plain sentences describing a plan, built only from the measured dry-run data."""
     if risk == "blocked":
-        return f"Blocked: {'; '.join(reasons)}. Nothing was run."
+        return f"Blocked: {'; '.join(r.rstrip('.') for r in reasons)}. Nothing was run."
     imp = impact or {}
     t, n = imp.get("target_table"), imp.get("rows_affected")
     before = imp.get("table_rows_before")

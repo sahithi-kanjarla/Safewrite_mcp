@@ -27,7 +27,8 @@ mcp = MCPServer(
         "changing anything, show that preview to the user in plain language, then call apply_change(plan_id). "
         "Medium and high risk changes require the user's approval, which you cannot grant or bypass. "
         "If a change is blocked, explain why and propose a safer alternative; do not try to rephrase it to "
-        "slip past the policy."
+        "slip past the policy. Only a person can change the policy: never edit policy.json or look for another "
+        "way around a block, and tell the user what the block message says they can do."
     ),
 )
 

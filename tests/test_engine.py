@@ -393,3 +393,54 @@ def test_summary_does_not_promise_undo_when_snapshots_are_off(db):
 def test_summary_is_persisted_for_the_terminal(g):
     plan = g.plan(CASCADE, "x")
     assert g.pending()[0]["summary"] == plan["summary"]
+
+
+# ---------------------------------------------------------- DROP (allow_drop)
+@pytest.fixture
+def gd(db):
+    engine = GuardedDB(db, policy=Policy(allow_drop=True, protected_tables=["settings"]))
+    yield engine
+    engine.close()
+
+
+def test_drop_flow_plan_approve_apply_undo_restores_table_and_rows(gd, db, fp):
+    before = fp()
+    n = scalar(db, "SELECT COUNT(*) FROM products")
+    plan = gd.plan("DROP TABLE products", "retire products")
+    assert plan["status"] == "planned" and plan["risk"] == "high" and plan["requires_approval"]
+    assert plan["impact"]["net_row_changes"] == {"products": -n}
+    assert fp() == before  # planning changed nothing
+
+    with pytest.raises(ApprovalRequired):
+        gd.apply(plan["plan_id"])
+    assert scalar(db, "SELECT COUNT(*) FROM products") == n  # still there without approval
+
+    gd.approve(plan["plan_id"])
+    assert gd.apply(plan["plan_id"])["status"] == "applied"
+    assert scalar(db, "SELECT COUNT(*) FROM sqlite_master WHERE name='products'") == 0
+
+    assert gd.undo_last()["status"] == "undone"
+    assert scalar(db, "SELECT COUNT(*) FROM products") == n
+    assert fp() == before  # schema and every row identical
+
+
+def test_drop_of_a_parent_table_reports_and_restores_cascaded_rows(gd, db, fp):
+    before = fp()
+    orders = scalar(db, "SELECT COUNT(*) FROM orders")
+    plan = gd.plan("DROP TABLE customers", "x")
+    assert plan["risk"] == "high"
+    assert plan["impact"]["collateral_changes"] == {"orders": -orders}
+    gd.approve(plan["plan_id"])
+    gd.apply(plan["plan_id"])
+    gd.undo_last()
+    assert scalar(db, "SELECT COUNT(*) FROM orders") == orders
+    assert fp() == before
+
+
+@pytest.mark.parametrize("sql", ["DROP TABLE settings", "DROP TABLE IF EXISTS Settings", "TRUNCATE TABLE settings"])
+def test_protected_tables_stay_blocked_even_with_allow_drop(gd, db, fp, sql):
+    before = fp()
+    plan = gd.plan(sql, "x")
+    assert plan["status"] == "blocked" and "plan_id" not in plan
+    assert "protected table" in plan["reasons"][0]
+    assert fp() == before

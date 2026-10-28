@@ -103,3 +103,16 @@ def test_target_and_where_are_extracted():
     c = classify("UPDATE customers AS c SET status='x' WHERE c.id=1", POLICY)
     assert (c.target_table, c.target_alias, c.where_sql) == ("customers", "c", "c.id = 1")
     assert classify("DELETE FROM customers", POLICY).where_sql is None
+
+
+@pytest.mark.parametrize("sql,flag", [
+    ("DROP TABLE customers", "allow_drop"),
+    ("TRUNCATE TABLE customers", "allow_drop"),
+    ("ALTER TABLE customers ADD COLUMN x TEXT", "allow_ddl"),
+    ("CREATE TABLE t (id INTEGER)", "allow_ddl"),
+])
+def test_disabled_ddl_message_says_how_to_enable(sql, flag):
+    c = classify(sql, POLICY)
+    assert c.blocked
+    assert c.reasons[0] == (f"{c.kind.upper()} is disabled by policy. A person can enable it by setting "
+                            f"{flag} to true in policy.json and restarting the server.")

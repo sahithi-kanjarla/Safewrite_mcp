@@ -11,6 +11,8 @@ An MCP server that sits between an AI agent and your SQLite database. Before a w
 - **Dangerous** changes, such as `DROP TABLE`, are blocked by policy.
 - **Every step is logged** in a tamper-evident audit log you can verify with `safewrite-mcp verify`.
 
+Dropping tables is off by default. A person can enable it by setting allow_drop to true in policy.json; drops then go through the same preview, approval and undo flow.
+
 ## Example
 
 Abridged output of [`examples/walkthrough.py`](https://github.com/sahithi-kanjarla/Safewrite_mcp/blob/main/examples/walkthrough.py):

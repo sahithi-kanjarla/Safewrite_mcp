@@ -143,9 +143,11 @@ def classify(sql: str, policy: Policy) -> Classification:
 
     # Policy gates for DDL come first so the block reason names the real cause.
     if kind in ("drop", "truncate") and not policy.allow_drop:
-        return _blocked(kind, f"{kind.upper()} is disabled by policy")
+        return _blocked(kind, f"{kind.upper()} is disabled by policy. A person can enable it by setting "
+                              "allow_drop to true in policy.json and restarting the server.")
     if kind in ("create", "alter") and not policy.allow_ddl:
-        return _blocked(kind, "schema changes (CREATE/ALTER) are disabled by policy")
+        return _blocked(kind, f"{kind.upper()} is disabled by policy. A person can enable it by setting "
+                              "allow_ddl to true in policy.json and restarting the server.")
 
     target = _target(expr)
     if target is None or not target.name:

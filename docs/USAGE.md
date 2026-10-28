@@ -113,6 +113,11 @@ Policy lives in `<db dir>/.safewrite/policy.json` (all keys optional):
   "allow_ddl": false, "allow_drop": false, "approval_mode": "elicit" }
 ```
 
+- `allow_drop` (default `false`): `DROP` and `TRUNCATE` are blocked, and the block message tells a person to set this to true and restart the server. When true, a `DROP TABLE` is planned as high risk, always needs human approval, and `undo_last_change` restores the table and its rows (including rows removed by cascades into other tables, which the plan lists). Protected tables stay blocked even when this is true.
+- `allow_ddl` (default `false`): `CREATE` and `ALTER` are blocked, with a message that points to this setting. When true they are classified as medium risk, so they need approval. This path is covered by classifier tests only; unlike `allow_drop`, the full plan, apply and undo flow for it has not been tested.
+
+Policy is read when the server starts, so changes to `policy.json` take effect after a restart.
+
 ## Testing
 
 ```bash

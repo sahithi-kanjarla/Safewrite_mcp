@@ -1,6 +1,6 @@
 {
   "env": {
-    "date": "2026-10-27",
+    "date": "2026-10-28",
     "python": "3.13.8",
     "sqlite": "3.50.4",
     "sqlglot": "30.25.0",
@@ -189,29 +189,29 @@
     {
       "orders": 1000,
       "db_mb": 0.07,
-      "plan_targeted_p50_ms": 5.73,
-      "plan_targeted_p95_ms": 9.07,
-      "plan_10pct_p50_ms": 11.43,
-      "apply_with_snapshot_p50_ms": 14.95,
-      "raw_update_p50_ms": 3.908
+      "plan_targeted_p50_ms": 17.77,
+      "plan_targeted_p95_ms": 20.95,
+      "plan_10pct_p50_ms": 23.13,
+      "apply_with_snapshot_p50_ms": 58.33,
+      "raw_update_p50_ms": 19.254
     },
     {
       "orders": 10000,
       "db_mb": 0.43,
-      "plan_targeted_p50_ms": 5.6,
-      "plan_targeted_p95_ms": 11.01,
-      "plan_10pct_p50_ms": 7.86,
-      "apply_with_snapshot_p50_ms": 18.44,
-      "raw_update_p50_ms": 4.388
+      "plan_targeted_p50_ms": 36.22,
+      "plan_targeted_p95_ms": 55.55,
+      "plan_10pct_p50_ms": 29.95,
+      "apply_with_snapshot_p50_ms": 63.2,
+      "raw_update_p50_ms": 15.261
     },
     {
       "orders": 100000,
       "db_mb": 4.17,
-      "plan_targeted_p50_ms": 23.32,
-      "plan_targeted_p95_ms": 65.41,
-      "plan_10pct_p50_ms": 28.34,
-      "apply_with_snapshot_p50_ms": 70.33,
-      "raw_update_p50_ms": 3.773
+      "plan_targeted_p50_ms": 40.66,
+      "plan_targeted_p95_ms": 55.71,
+      "plan_10pct_p50_ms": 63.23,
+      "apply_with_snapshot_p50_ms": 288.52,
+      "raw_update_p50_ms": 13.258
     }
   ],
   "tamper": {
