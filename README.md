@@ -2,7 +2,9 @@
 
 An MCP server that sits between an AI agent and your SQLite database. Before a write runs, it tests it safely and shows what it would really do, for example "deletes 1 customer and 4 orders". Small changes go through, risky ones wait for your approval, dangerous ones are blocked, and the last change can be undone.
 
-<!-- TODO: demo GIF here -->
+![safewrite-mcp demo](https://raw.githubusercontent.com/sahithi-kanjarla/Safewrite_mcp/main/docs/demo.gif)
+
+*Rendered from the real output of `examples/walkthrough.py`, which calls the engine directly in place of an AI agent.*
 
 ## How it works
 
