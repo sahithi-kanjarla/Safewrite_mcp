@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "safewrite-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "A database MCP server where every agent write is previewed, approved by a human, and undoable. Includes a reproducible red-team benchmark."
 readme = "README.md"
 requires-python = ">=3.10"
