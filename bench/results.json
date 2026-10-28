@@ -189,29 +189,29 @@
     {
       "orders": 1000,
       "db_mb": 0.07,
-      "plan_targeted_p50_ms": 17.77,
-      "plan_targeted_p95_ms": 20.95,
-      "plan_10pct_p50_ms": 23.13,
-      "apply_with_snapshot_p50_ms": 58.33,
-      "raw_update_p50_ms": 19.254
+      "plan_targeted_p50_ms": 6.35,
+      "plan_targeted_p95_ms": 8.47,
+      "plan_10pct_p50_ms": 7.26,
+      "apply_with_snapshot_p50_ms": 15.63,
+      "raw_update_p50_ms": 4.269
     },
     {
       "orders": 10000,
       "db_mb": 0.43,
-      "plan_targeted_p50_ms": 36.22,
-      "plan_targeted_p95_ms": 55.55,
-      "plan_10pct_p50_ms": 29.95,
-      "apply_with_snapshot_p50_ms": 63.2,
-      "raw_update_p50_ms": 15.261
+      "plan_targeted_p50_ms": 6.55,
+      "plan_targeted_p95_ms": 9.4,
+      "plan_10pct_p50_ms": 15.59,
+      "apply_with_snapshot_p50_ms": 19.5,
+      "raw_update_p50_ms": 4.529
     },
     {
       "orders": 100000,
       "db_mb": 4.17,
-      "plan_targeted_p50_ms": 40.66,
-      "plan_targeted_p95_ms": 55.71,
-      "plan_10pct_p50_ms": 63.23,
-      "apply_with_snapshot_p50_ms": 288.52,
-      "raw_update_p50_ms": 13.258
+      "plan_targeted_p50_ms": 20.84,
+      "plan_targeted_p95_ms": 24.08,
+      "plan_10pct_p50_ms": 26.02,
+      "apply_with_snapshot_p50_ms": 71.03,
+      "raw_update_p50_ms": 4.594
     }
   ],
   "tamper": {

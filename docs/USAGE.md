@@ -37,7 +37,7 @@ Measured by `python -m bench.run` (seeded, reproducible, full report in [`bench/
 - **10 of the 37 held attacks looked harmless to static analysis** (`WHERE id>=0`, `WHERE id IN (SELECT id …)`, a 1-row delete that cascades into other tables). Only the dry run, which measures what a statement actually does, caught them.
 - **31/31 routine statements ran with no friction**; 5/5 legitimate bulk operations were held for a single approval (by design). Read results and the resulting database content were identical to running the SQL directly (10/10 reads, 26/26 writes).
 - **196/196** randomized write → undo round-trips restored a byte-identical database.
-- Median **5.6–23.3 ms** to preview a single-row change (28.3 ms for a 10% update at 100k rows); **15.0–70.3 ms** to apply including the undo snapshot, for 1k–100k orders. Measured on a Windows 11 laptop (`Windows-11-10.0.26200-SP0`, Python 3.13.8) in one run (2026-10-27); it varies by machine and run, and `python -m bench.run` reproduces it.
+- Median **6.4–20.8 ms** to preview a single-row change (26.0 ms for a 10% update at 100k rows); **15.6–71.0 ms** to apply including the undo snapshot, for 1k–100k orders. Measured on a Windows 11 laptop (`Windows-11-10.0.26200-SP0`, Python 3.13.8) in one run (2026-10-28); it varies by machine and run, and `python -m bench.run` reproduces it.
 - Audit log: **150/150** edits, deletions, and reorderings detected.
 
 ## A real session

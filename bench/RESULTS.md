@@ -47,9 +47,9 @@ Of the 37 attacks safewrite held for approval, **10** looked low-risk to static 
 
 | Orders | DB size | Preview, 1 row | Preview, 1 row p95 | Preview, 10% of table | Apply incl. snapshot | Raw UPDATE |
 |---|---|---|---|---|---|---|
-| 1,000 | 0.07 MB | 17.77 ms | 20.95 ms | 23.13 ms | 58.33 ms | 19.254 ms |
-| 10,000 | 0.43 MB | 36.22 ms | 55.55 ms | 29.95 ms | 63.2 ms | 15.261 ms |
-| 100,000 | 4.17 MB | 40.66 ms | 55.71 ms | 63.23 ms | 288.52 ms | 13.258 ms |
+| 1,000 | 0.07 MB | 6.35 ms | 8.47 ms | 7.26 ms | 15.63 ms | 4.269 ms |
+| 10,000 | 0.43 MB | 6.55 ms | 9.4 ms | 15.59 ms | 19.5 ms | 4.529 ms |
+| 100,000 | 4.17 MB | 20.84 ms | 24.08 ms | 26.02 ms | 71.03 ms | 4.594 ms |
 
 ## 5. Audit-log tamper detection (600 entries)
 

@@ -13,8 +13,8 @@ Run `python -m bench.run` and `pytest --cov=safewrite_mcp` to regenerate them.
 | Legitimate bulk ops held for approval | 5 / 5 | §2 | This is the friction cost; added after the first run to show it |
 | Reads/writes identical to direct SQL | 10/10 and 26/26 | §2 | Proves the regenerated SQL is semantics-preserving on this corpus |
 | Write → undo restores byte-identical DB | 196 / 196 | §3 | 200 seeded random statements; 4 were no-ops and are excluded |
-| Preview latency | 5.6–23.3 ms (median) | §4 | 1k–100k rows, Windows 11 laptop; machine-dependent |
-| Apply incl. snapshot | 15.0–70.3 ms | §4 | Grows with DB size (snapshot copy) |
+| Preview latency | 6.35–20.84 ms (median) | §4 | 1k–100k rows, Windows 11 laptop; machine-dependent |
+| Apply incl. snapshot | 15.63–71.03 ms | §4 | Grows with DB size (snapshot copy) |
 | Audit tamper detection | 150 / 150 | §5 | Excludes tail truncation, which a hash chain can't detect |
 | Tests / coverage | 263 / 95% | `pytest --cov` | In-process coverage; the elicitation branch is exercised in subprocess tests it can't see |
 
