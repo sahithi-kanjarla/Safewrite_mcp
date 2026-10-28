@@ -160,6 +160,8 @@ Policy lives in `<db dir>/.safewrite/policy.json` (all keys optional):
 - Elicitation is only as trustworthy as the client; use `out_of_band` for autonomous agents.
 - Benchmark corpora are author-written; the keyword-filter baseline is one reasonable filter, not all filters.
 
+More detail: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) (what it does and does not defend against) and [`docs/COMPARISON.md`](docs/COMPARISON.md) (how it differs from other categories of database MCP servers, and what it trades off).
+
 ## Testing
 
 ```bash
