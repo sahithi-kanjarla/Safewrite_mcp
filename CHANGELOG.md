@@ -26,7 +26,7 @@
   if the database is unchanged. No timeout or policy value changed, and the headline attack numbers are the same.
 
 ### Tests
-- 254 tests passing in this release (run with `pytest` in the project virtual environment).
+- 263 tests passing in this release (run with `pytest` in the project virtual environment).
 
 ## 0.1.0 - 2026-10-27
 

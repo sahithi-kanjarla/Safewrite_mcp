@@ -121,7 +121,7 @@ Policy is read when the server starts, so changes to `policy.json` take effect a
 ## Testing
 
 ```bash
-pytest --cov=safewrite_mcp      # 254 tests, 95% line coverage
+pytest --cov=safewrite_mcp      # 263 tests, 95% line coverage
 python -m bench.run             # regenerates bench/RESULTS.md and results.json
 python examples/walkthrough.py  # the session above, live
 ```
