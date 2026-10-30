@@ -2,6 +2,8 @@
 
 An MCP server that sits between an AI agent and your SQLite database. Before a write runs, it tests it safely and shows what it would really do, for example "deletes 1 customer and 4 orders". Small changes go through, risky ones wait for your approval, dangerous ones are blocked, and the last change can be undone.
 
+Status: alpha (0.x). The API may change.
+
 ![safewrite-mcp demo](https://raw.githubusercontent.com/sahithi-kanjarla/Safewrite_mcp/main/docs/demo.gif)
 
 *Rendered from the real output of `examples/walkthrough.py`, which calls the engine directly in place of an AI agent.*
@@ -13,24 +15,7 @@ An MCP server that sits between an AI agent and your SQLite database. Before a w
 - **Dangerous** changes, such as `DROP TABLE`, are blocked by policy.
 - **Every step is logged** in a tamper-evident audit log you can verify with `safewrite-mcp verify`.
 
-Dropping tables is off by default. A person can enable it by setting allow_drop to true in policy.json; drops then go through the same preview, approval and undo flow.
-
-## Example
-
-Abridged output of [`examples/walkthrough.py`](https://github.com/sahithi-kanjarla/Safewrite_mcp/blob/main/examples/walkthrough.py):
-
-```
-[agent] Remove the test customer, id 1.
-   -> status=planned risk=high rows=1 cascades={'orders': -4}
-   tool: apply_change -> approval_required (plan cd4b97ecfa6853b5 is high risk and needs human approval)
-[human] $ safewrite-mcp approve cd4b97ecfa6853b5 --db shop.db --yes
-   This will delete 1 row from customers and 4 rows from orders (cascade/trigger). customers would go from 200 to 199 rows. High risk. It can be undone.
-   tool: apply_change -> applied (out-of-band)
-   customers now: 199, orders now: 996
-[human] That removed too much. Undo.
-   tool: undo_last_change -> undone
-   customers: 200, orders: 1000
-```
+Dropping tables is off by default. A person can enable it by setting allow_drop to true in policy.json; drops then go through the same preview, approval and undo flow. The file lives in `<database folder>/.safewrite/policy.json`.
 
 ## Results
 
@@ -44,6 +29,8 @@ From [`bench/RESULTS.md`](https://github.com/sahithi-kanjarla/Safewrite_mcp/blob
 | Keyword filter | **31/72** |
 | safewrite-mcp | **0/72** |
 
+0/72 means every attack was blocked, held for approval, or stopped by a timeout.
+
 The 72 attacks were written by the author. This measures the design against these cases. It is not a security guarantee.
 
 - **31/31** routine statements ran with no friction.
@@ -52,6 +39,8 @@ The 72 attacks were written by the author. This measures the design against thes
 Full report: [`bench/RESULTS.md`](https://github.com/sahithi-kanjarla/Safewrite_mcp/blob/main/bench/RESULTS.md)
 
 ## Install and connect
+
+Requires Python 3.10 or newer (tested on 3.13).
 
 Install from the repo for now:
 
@@ -92,14 +81,18 @@ It shows the plan and asks y/N. If you leave out the plan id, it lets you pick f
 
 ## Tested with
 
-The "risky instructions" in these tests (delete customer 1, `DROP TABLE`) were given by me, the author, on purpose to exercise the guard. They are not mistakes the AI made by itself.
+The risky instructions below (delete customer 1, `DROP TABLE`) were given by me, the author, on purpose to exercise the guard. They are not mistakes the AI made by itself.
 
-| Client | What I observed |
-|---|---|
-| Claude Code (headless, throwaway demo database) | Asked to delete customer 1. Rated high risk (4 cascaded orders). The apply was declined because no human was present. The database was unchanged and the audit chain verified. |
-| VS Code Copilot Agent mode | Update of customer 7 applied with no safewrite approval (low risk). Delete of customer 1 was held, needed terminal approval, then applied. `DROP TABLE` was blocked by policy. Undo: after a delete of customer 2 was approved and applied (it also removed 7 related orders), "undo the last change" ran and Copilot reported customer 2 was present again. Tested with VS Code 1.143.1 on 2026-10-27. |
-| Claude Desktop | Not tested. |
-| Cursor | Not tested. |
+| Risk level | Instruction | What safewrite did |
+|---|---|---|
+| Low | Set customer 7's status to vip | Applied with no approval |
+| High (cascade) | Delete customer 1 | Held. Showed 1 customer and 4 cascaded orders. Applied after approval |
+| Blocked | Drop the customers table | Blocked by policy |
+| Undo | Undo the last change | Customer 1 and its orders came back |
+
+Clients: Claude Code (headless, and interactive with the TestPyPI build of 0.2.0) and VS Code Copilot Agent mode (VS Code 1.143.1, 2026-10-27). Claude Desktop and Cursor: not tested.
+
+In a headless Claude Code run with no human present, the delete was held and the apply was declined; the database was unchanged and the audit chain verified.
 
 ## Limitations
 
