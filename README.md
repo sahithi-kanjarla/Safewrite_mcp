@@ -42,10 +42,10 @@ Full report: [`bench/RESULTS.md`](https://github.com/sahithi-kanjarla/Safewrite_
 
 Requires Python 3.10 or newer (tested on 3.13).
 
-Install from the repo for now:
+Install:
 
 ```bash
-pip install git+https://github.com/sahithi-kanjarla/Safewrite_mcp.git
+pip install safewrite-mcp
 safewrite-mcp demo-db demo.db    # optional: a seeded demo database
 ```
 
