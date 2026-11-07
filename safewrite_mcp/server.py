@@ -16,7 +16,7 @@ from typing import Any
 from mcp.server.mcpserver import Context, MCPServer
 from pydantic import BaseModel, Field
 
-from .engine import ApprovalRequired, Blocked, GuardedDB, PlanInvalid, SafeWriteError
+from .engine import ApprovalRequired, Blocked, GuardedDB, PlanInvalid, SafeWriteError, impact_lines
 from .policy import Policy
 
 mcp = MCPServer(
@@ -88,6 +88,7 @@ def _approval_message(view: dict[str, Any]) -> str:
     if imp["collateral_changes"]:
         lines.append(f"Also changes other tables: {imp['collateral_changes']}")
     lines += [f"- {r}" for r in view["reasons"]]
+    lines += impact_lines(imp)
     return "\n".join(lines)
 
 

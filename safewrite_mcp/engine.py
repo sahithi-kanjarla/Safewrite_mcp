@@ -36,6 +36,8 @@ from .classify import RISK_ORDER, Classification, classify
 from .policy import Policy
 
 SAMPLE_ROWS = 5
+IMPACT_SAMPLE_ROWS = 3      # rows shown per table in the impact section
+IMPACT_VALUE_MAX = 60       # longest value shown in the impact section
 PLAN_ID_RE = re.compile(r"[0-9a-f]{16}")
 
 
@@ -72,6 +74,27 @@ def _j(v: Any) -> Any:
 def _row(cols: list[str], values: Any) -> dict[str, Any]:
     """Row as a JSON-safe dict; our internal rowid helper column is exposed as plain 'rowid'."""
     return {("rowid" if c == "__rid" else c): _j(v) for c, v in zip(cols, values)}
+
+
+def _clip(v: Any, limit: int = IMPACT_VALUE_MAX) -> Any:
+    """Shorten a displayed value to at most `limit` characters."""
+    if isinstance(v, bytes):
+        return f"<{len(v)} bytes>"
+    if isinstance(v, str):
+        return v if len(v) <= limit else v[: limit - 3] + "..."
+    if isinstance(v, (int, float)) or v is None:
+        return v
+    return _clip(str(v), limit)
+
+
+def _clip_row(row: dict[str, Any]) -> dict[str, Any]:
+    out = {}
+    for k, v in row.items():
+        if k == "changes" and isinstance(v, dict):
+            out[k] = {col: [_clip(o), _clip(n)] for col, (o, n) in v.items()}
+        else:
+            out[k] = _clip(v)
+    return out
 
 
 def db_fingerprint(path: Path | str) -> str:
@@ -152,6 +175,26 @@ def summarize(kind: str, risk: str, reasons: list[str], impact: dict[str, Any] |
             head = f"This will change {_n(n)} in {t}."
     tail = f" {risk.capitalize()} risk." + (" It can be undone." if undoable else " It cannot be undone automatically.")
     return head + tail
+
+
+def impact_lines(impact: dict[str, Any]) -> list[str]:
+    """Plain-text rendering of the impact section (tables, samples, why, reversible) for the CLI and approval prompt."""
+    lines: list[str] = []
+    tables = impact.get("tables") or {}
+    if tables:
+        lines.append("impact:")
+        for name, e in tables.items():
+            note = "" if e["role"] == "target" else "  (cascade/trigger)"
+            lines.append(f"  {name}: {e['before']} -> {e['after']} rows ({e['change']:+d}){note}")
+            for r in e["sample"]:
+                lines.append(f"      {e['sample_kind']}: {json.dumps(r, default=str)}")
+    if impact.get("why"):
+        lines.append("why:")
+        lines += [f"  - {w}" for w in impact["why"]]
+    rev = impact.get("reversible")
+    if rev:
+        lines.append("reversible: " + (f"yes, via {rev['how']}" if rev["undoable"] else "no") + f" ({rev['note']})")
+    return lines
 
 
 @dataclass
@@ -378,8 +421,99 @@ class GuardedDB:
             "trigger_or_cascade_changes": max(0, changes - rows_affected) if rows_affected is not None else 0,
             "overwritten_rows": overwritten,
             "diff": self._diff(c, sb, sa),
+            "_before_counts": before,
             "dry_run_ms": round(secs * 1000, 2),
         }
+
+    def _collateral_samples(self, c: Classification, tables: list[str]) -> dict[str, dict[str, Any]]:
+        """Second dry run that finds WHICH rows came or went in the cascaded/triggered tables."""
+        conn = self._conn
+        out: dict[str, dict[str, Any]] = {}
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            self._arm(conn, self.policy.query_timeout_ms)
+            ids_before = {t: {r[0] for r in conn.execute(f"SELECT rowid FROM {_q(t)}")} for t in tables}
+            conn.execute("SAVEPOINT probe")
+            conn.execute(c.canonical_sql or "").fetchall()
+            added: dict[str, list[dict[str, Any]]] = {}
+            removed_ids: dict[str, list[int]] = {}
+            for t in tables:
+                ids_after = {r[0] for r in conn.execute(f"SELECT rowid FROM {_q(t)}")}
+                new_ids = sorted(ids_after - ids_before[t])[:IMPACT_SAMPLE_ROWS]
+                if new_ids:
+                    cur = conn.execute(
+                        f"SELECT rowid AS __rid, * FROM {_q(t)} WHERE rowid IN ({','.join('?' * len(new_ids))}) ORDER BY rowid", new_ids)
+                    cols = [d[0] for d in cur.description]
+                    added[t] = [_row(cols, r) for r in cur.fetchall()]
+                gone = sorted(ids_before[t] - ids_after)[:IMPACT_SAMPLE_ROWS]
+                if gone:
+                    removed_ids[t] = gone
+            conn.execute("ROLLBACK TO probe")
+            for t, ids in removed_ids.items():
+                cur = conn.execute(
+                    f"SELECT rowid AS __rid, * FROM {_q(t)} WHERE rowid IN ({','.join('?' * len(ids))}) ORDER BY rowid", ids)
+                cols = [d[0] for d in cur.description]
+                out[t] = {"sample_kind": "removed", "sample": [_row(cols, r) for r in cur.fetchall()]}
+            for t, rows in added.items():
+                out.setdefault(t, {"sample_kind": "added", "sample": rows})
+        except sqlite3.Error:
+            return {}      # e.g. a WITHOUT ROWID table: counts are still reported, just no sample
+        finally:
+            self._disarm(conn)
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+        return out
+
+    def _impact_view(self, c: Classification, impact: dict[str, Any], risk: str) -> None:
+        """Add the reader-friendly sections (tables, why, reversible) to the measured impact. Never changes the risk."""
+        p = self.policy
+        net, t = impact["net_row_changes"], impact["target_table"]
+        collateral = impact["collateral_changes"]
+        extra = self._collateral_samples(c, list(collateral)) if collateral and risk != "blocked" else {}
+        before_counts = impact.pop("_before_counts")
+        tables: dict[str, Any] = {}
+        for name in ([t] if t else []) + list(collateral):
+            b = before_counts.get(name, 0)
+            entry: dict[str, Any] = {"role": "target" if name == t else "cascade/trigger",
+                                     "before": b, "after": b + net.get(name, 0), "change": net.get(name, 0)}
+            if name == t:
+                diff = impact.get("diff") or {}
+                key = next((k for k in diff if k.startswith("rows_")), None)
+                entry["sample_kind"] = key[5:] if key else None
+                entry["sample"] = [_clip_row(r) for r in (diff.get(key) or [])[:IMPACT_SAMPLE_ROWS]]
+            else:
+                found = extra.get(name, {})
+                entry["sample_kind"] = found.get("sample_kind")
+                entry["sample"] = [_clip_row(r) for r in found.get("sample", [])[:IMPACT_SAMPLE_ROWS]]
+            tables[name] = entry
+        impact["tables"] = tables
+
+        why = list(c.reasons)
+        n, tb = impact["rows_affected"], impact["table_rows_before"]
+        if n is not None and n > p.hard_max_rows:
+            why.append(f"{n} rows is above the hard limit of {p.hard_max_rows}")
+        elif n is not None and n > p.auto_approve_max_rows:
+            why.append(f"{n} rows is above the auto-approve limit of {p.auto_approve_max_rows}")
+        if n and tb and tb >= p.min_rows_for_fraction and n / tb >= p.max_table_fraction:
+            why.append(f"touches {n / tb:.0%} of '{t}' ({n} of {tb} rows)")
+        for name, d in collateral.items():
+            why.append(f"cascades into {name} ({d:+d} rows)")
+        if not collateral and impact["trigger_or_cascade_changes"]:
+            why.append("a trigger or cascade changes other rows")
+        if impact["overwritten_rows"]:
+            why.append(f"overwrites {impact['overwritten_rows']} existing row(s)")
+        if not why:
+            why.append(f"{n} row(s) is within the auto-approve limit of {p.auto_approve_max_rows}, with no cascades")
+        impact["why"] = why
+
+        if risk == "blocked":
+            impact["reversible"] = {"undoable": False, "how": None, "note": "blocked: nothing will run"}
+        elif self._undoable():
+            impact["reversible"] = {"undoable": True, "how": "undo_last_change",
+                                    "note": "restores a snapshot taken just before applying; refused if the database changes afterwards"}
+        else:
+            impact["reversible"] = {"undoable": False, "how": None,
+                                    "note": "database is above snapshot_max_mb, so no snapshot is taken"}
 
     def _assess(self, c: Classification, impact: dict[str, Any]) -> tuple[str, list[str]]:
         p = self.policy
@@ -423,6 +557,7 @@ class GuardedDB:
                 self.audit.append("plan_error", sql=c.canonical_sql, error=msg, intent=intent)
                 return {"status": "error", "error": f"the statement failed in the dry run; nothing was changed: {msg}", **base}
             risk, reasons = self._assess(c, impact)
+            self._impact_view(c, impact, risk)
             if risk == "blocked":
                 self.audit.append("blocked", sql=c.canonical_sql, kind=c.kind, reasons=reasons, intent=intent)
                 return {"status": "blocked", "risk": "blocked", "reasons": reasons, "impact": impact,
@@ -578,15 +713,21 @@ class GuardedDB:
                 raise PlanInvalid("nothing to undo in this session")
             if self._epoch != lc["epoch_after"] or self._data_version() != lc["data_version_after"]:
                 raise PlanInvalid("the database changed after that change, so undo was refused to avoid losing newer data")
+            before = self._counts(self._conn, self._user_tables(self._conn))
             snap = sqlite3.connect(lc["snapshot"])
             try:
                 snap.backup(self._conn)
             finally:
                 snap.close()
+            after = self._counts(self._conn, self._user_tables(self._conn))
+            restored = {t: after.get(t, 0) - before.get(t, 0) for t in sorted(set(before) | set(after))}
+            restored = {t: d for t, d in restored.items() if d}
+            tables = {t: {"before": before.get(t, 0), "after": after.get(t, 0), "change": d} for t, d in restored.items()}
             self._epoch += 1
             self._last_change = None
-            self.audit.append("undo", change_id=lc["change_id"], sql=lc["sql"])
-            return {"status": "undone", "change_id": lc["change_id"], "undid": lc["sql"]}
+            self.audit.append("undo", change_id=lc["change_id"], sql=lc["sql"], restored=restored)
+            return {"status": "undone", "change_id": lc["change_id"], "undid": lc["sql"],
+                    "restored": restored, "tables": tables}
 
     def close(self) -> None:
         with self._lock:

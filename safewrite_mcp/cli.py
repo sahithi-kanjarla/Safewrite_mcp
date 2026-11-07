@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .audit import AuditLog
 from .demo import create_demo_db
+from .engine import impact_lines
 
 
 def _home(args: argparse.Namespace) -> Path:
@@ -60,9 +61,11 @@ def _print_plan(plan: dict) -> None:
     for r in plan["reasons"]:
         print(f"  - {r}")
     diff = imp.get("diff")
-    if diff:
+    if diff and "tables" not in imp:      # plan file written before the impact section existed
         key = next(k for k in diff if k.startswith("rows_"))
         print(f"  sample    {json.dumps(diff[key][:3], default=str)}")
+    for line in impact_lines(imp):
+        print(f"  {line}")
     print()
 
 
