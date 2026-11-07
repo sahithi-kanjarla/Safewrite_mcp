@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 - 2026-11-07
+
+### Changed
+- Plans now show per-table before/after row counts, a sample of the affected rows (including rows removed or
+  changed by cascades), the reasons behind the risk level, and whether the change is reversible.
+- `undo_last_change` now reports the restored rows per table.
+- README updated for installing from PyPI.
+
+### Tests
+- 271 tests passing in this release (run with `pytest` in the project virtual environment).
+
 ## 0.2.0 - 2026-10-28
 
 ### Added
